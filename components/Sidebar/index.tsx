@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Button } from "../ui/button";
 import {
   Church,
@@ -11,10 +11,13 @@ import {
   Users,
   CalendarDays,
   Settings,
+  Building2,
+  FileText,
+  UserCheck,
 } from "lucide-react";
-import { useState } from "react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { authService } from "@/services/authService";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -23,28 +26,27 @@ interface SidebarProps {
 
 const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
   const pathname = usePathname();
+  const router = useRouter();
+
   const sidebarItems = [
-    {
-      title: "Dashboard",
-      href: "/admin",
-      icon: BarChart3,
-    },
-    {
-      title: "Attendance",
-      href: "/admin/attendance",
-      icon: Users,
-    },
-    {
-      title: "Events",
-      href: "/admin/events",
-      icon: CalendarDays,
-    },
-    {
-      title: "Settings",
-      href: "/admin/settings",
-      icon: Settings,
-    },
+    { title: "Dashboard", href: "/admin", icon: BarChart3 },
+    { title: "Members", href: "/admin/members", icon: Users },
+    { title: "Attendance", href: "/admin/attendance", icon: UserCheck },
+    { title: "Departments", href: "/admin/departments", icon: Building2 },
+    { title: "Invoices", href: "/admin/invoices", icon: FileText },
+    { title: "Events", href: "/admin/events", icon: CalendarDays },
+    { title: "Settings", href: "/admin/settings", icon: Settings },
   ];
+
+  const isActive = (href: string) => {
+    if (href === "/admin") return pathname === "/admin";
+    return pathname.startsWith(href);
+  };
+
+  const handleLogout = async () => {
+    await authService.logout();
+    router.push("/login");
+  };
 
   return (
     <aside
@@ -82,7 +84,7 @@ const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
               href={item.href}
               className={cn(
                 "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors",
-                pathname === item.href
+                isActive(item.href)
                   ? "bg-gray-100 text-gray-900"
                   : "text-gray-500 hover:bg-gray-50 hover:text-gray-900",
                 !isOpen && "justify-center"
@@ -101,6 +103,7 @@ const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
               "w-full text-red-500 hover:text-red-700 hover:bg-red-50",
               !isOpen && "justify-center"
             )}
+            onClick={handleLogout}
           >
             <LogOut className="h-5 w-5" />
             {isOpen && <span className="ml-2">Logout</span>}
