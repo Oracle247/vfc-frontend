@@ -8,6 +8,11 @@ import {
     IAttendanceSession,
     MarkAttendancePayload,
     UpdateAttendanceSessionPayload,
+    AttendanceSummary,
+    TopMember,
+    MemberAttendancePoint,
+    AttendanceTrendPoint,
+    AttendanceRatePoint,
 } from "@/types/attendance";
 
 export const attendanceService = {
@@ -49,5 +54,31 @@ export const attendanceService = {
         handleApiCall<{ success: boolean }>(
             () => apiClient.delete<ApiResponse<{ success: boolean }>>(`/attendance/session/${id}`),
             "Session deleted successfully!"
+        ),
+
+    // Analytics
+    getAttendanceSummary: () =>
+        handleApiCall<AttendanceSummary>(
+            () => apiClient.get<ApiResponse<AttendanceSummary>>("/attendance/analytics/summary")
+        ),
+
+    getTopMembers: (params?: { limit?: number }) =>
+        handleApiCall<TopMember[]>(
+            () => apiClient.get<ApiResponse<TopMember[]>>("/attendance/analytics/top-members", { params })
+        ),
+
+    getMemberAttendanceHistory: (userId: string) =>
+        handleApiCall<MemberAttendancePoint[]>(
+            () => apiClient.get<ApiResponse<MemberAttendancePoint[]>>(`/attendance/analytics/member-history/${userId}`)
+        ),
+
+    getAttendanceTrend: (params?: { groupBy?: string }) =>
+        handleApiCall<AttendanceTrendPoint[]>(
+            () => apiClient.get<ApiResponse<AttendanceTrendPoint[]>>("/attendance/analytics/trend", { params })
+        ),
+
+    getAttendanceRate: () =>
+        handleApiCall<AttendanceRatePoint[]>(
+            () => apiClient.get<ApiResponse<AttendanceRatePoint[]>>("/attendance/analytics/rate")
         ),
 };
