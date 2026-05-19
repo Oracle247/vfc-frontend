@@ -12,12 +12,15 @@ import {
 } from "@/components/ui/select";
 import { Upload, Plus, Search } from "lucide-react";
 import { userService } from "@/services/userService";
+import { authService } from "@/services/authService";
 import { IUser, UserFilterParams, UpdateChurchJourneyPayload } from "@/types/user";
 import { PaginatedData } from "@/types/api";
+import type { RegisterPayload } from "@/types/auth";
 import MembersTable from "./_components/MembersTable";
 import { ChurchJourneyDialog } from "./_components/ChurchJourneyDialog";
 import { SetPasswordDialog } from "./_components/SetPasswordDialog";
 import { BulkImportDialog } from "./_components/BulkImportDialog";
+import { RegisterMemberDialog } from "./_components/RegisterMemberDialog";
 
 export default function MembersPage() {
   const [members, setMembers] = useState<IUser[]>([]);
@@ -29,6 +32,7 @@ export default function MembersPage() {
   const [journeyUser, setJourneyUser] = useState<IUser | null>(null);
   const [passwordUser, setPasswordUser] = useState<IUser | null>(null);
   const [showImport, setShowImport] = useState(false);
+  const [showRegister, setShowRegister] = useState(false);
   const [searchInput, setSearchInput] = useState("");
 
   const fetchMembers = useCallback(async () => {
@@ -81,6 +85,11 @@ export default function MembersPage() {
     return result;
   };
 
+  const handleRegister = async (payload: RegisterPayload) => {
+    await authService.register(payload);
+    fetchMembers();
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -90,9 +99,14 @@ export default function MembersPage() {
             {pagination.total} total members
           </p>
         </div>
-        <Button onClick={() => setShowImport(true)}>
-          <Upload className="h-4 w-4 mr-2" /> Bulk Import
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => setShowRegister(true)}>
+            <Plus className="h-4 w-4 mr-2" /> Register Member
+          </Button>
+          <Button variant="outline" onClick={() => setShowImport(true)}>
+            <Upload className="h-4 w-4 mr-2" /> Bulk Import
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -197,6 +211,12 @@ export default function MembersPage() {
         open={showImport}
         onOpenChange={setShowImport}
         onImport={handleBulkImport}
+      />
+
+      <RegisterMemberDialog
+        open={showRegister}
+        onOpenChange={setShowRegister}
+        onRegister={handleRegister}
       />
     </div>
   );
