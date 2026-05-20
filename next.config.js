@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  basePath: '/admin',
+  output: 'standalone',
   trailingSlash: true,
   eslint: {
     ignoreDuringBuilds: true,
