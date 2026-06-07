@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -33,9 +33,9 @@ const statusColors: Record<string, string> = {
 };
 
 export default function InvoiceDetailPage() {
-  const params = useParams();
+  const searchParams = useSearchParams();
   const router = useRouter();
-  const invoiceId = params.id as string;
+  const invoiceId = searchParams.get("id") as string;
 
   const [invoice, setInvoice] = useState<IInvoice | null>(null);
   const [loading, setLoading] = useState(true);

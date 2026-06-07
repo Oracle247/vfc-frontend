@@ -6,6 +6,11 @@ export type MembershipType = "NON_WORKER" | "WORKER";
 export type WorkerType = "REGULAR" | "EXECUTIVE";
 export type UserRole = "MEMBER" | "WORKER" | "ADMIN";
 
+export interface IDepartmentRef {
+    id: string;
+    name: string;
+}
+
 export interface IUser {
     _id?: string;
     id?: string;
@@ -36,8 +41,19 @@ export interface IUser {
     // Attendance relation
     attendances?: IAttendance[];
 
+    // Department M2M (member of / heads / assists)
+    departments?: IDepartmentRef[];
+    headedDepartments?: IDepartmentRef[];
+    assistantDepartments?: IDepartmentRef[];
+
     createdAt?: Date;
     updatedAt?: Date;
+}
+
+export interface UpdateUserPayload extends Partial<Omit<IUser, "departments" | "headedDepartments" | "assistantDepartments" | "attendances" | "id" | "_id">> {
+    departmentIds?: string[];
+    headDepartmentIds?: string[];
+    assistantDepartmentIds?: string[];
 }
 
 export interface UpdateChurchJourneyPayload {

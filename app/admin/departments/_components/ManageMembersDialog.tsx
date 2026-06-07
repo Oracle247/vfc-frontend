@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { X, Search, UserPlus, Crown } from "lucide-react";
+import { X, Search, Crown, Check } from "lucide-react";
 import { IDepartment } from "@/types/department";
 import { IUser } from "@/types/user";
 import { userService } from "@/services/userService";
@@ -39,6 +39,10 @@ export function ManageMembersDialog({
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<IUser[]>([]);
   const [loading, setLoading] = useState(false);
+  // Map keeps the IUser around so chips can render even after the search
+  // query changes and the user falls out of `searchResults`.
+  const [selected, setSelected] = useState<Map<string, IUser>>(new Map());
+  const [submitting, setSubmitting] = useState(false);
 
   const searchUsers = debounce(async (query: string) => {
     if (query.trim().length < 2) {
@@ -60,11 +64,35 @@ export function ManageMembersDialog({
     searchUsers(searchQuery);
   }, [searchQuery]);
 
-  const handleAddMember = async (userId: string) => {
-    if (!department) return;
-    await onAddMembers(department.id, [userId]);
+  // Reset the picker whenever the dialog closes or the target department changes.
+  useEffect(() => {
+    setSelected(new Map());
     setSearchQuery("");
     setSearchResults([]);
+  }, [department?.id, open]);
+
+  const toggleSelected = (user: IUser) => {
+    if (!user.id) return;
+    setSelected((prev) => {
+      const next = new Map(prev);
+      if (next.has(user.id!)) next.delete(user.id!);
+      else next.set(user.id!, user);
+      return next;
+    });
+  };
+
+  const handleAddSelected = async () => {
+    if (!department || selected.size === 0) return;
+    setSubmitting(true);
+    try {
+      // Always sent as an array — even when there's only one id.
+      await onAddMembers(department.id, Array.from(selected.keys()));
+      setSelected(new Map());
+      setSearchQuery("");
+      setSearchResults([]);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleRemoveMember = async (userId: string) => {
@@ -167,7 +195,7 @@ export function ManageMembersDialog({
             </div>
           </div>
 
-          {/* Add Members */}
+          {/* Add Members (multi-select) */}
           <div>
             <h3 className="text-sm font-semibold mb-2">Add Members</h3>
             <div className="relative">
@@ -179,24 +207,70 @@ export function ManageMembersDialog({
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
+
+            {/* Selected chips */}
+            {selected.size > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {Array.from(selected.values()).map((user) => (
+                  <span
+                    key={user.id}
+                    className="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 bg-emerald-50 text-emerald-700 text-xs rounded-full border border-emerald-200"
+                  >
+                    {user.firstName} {user.lastName}
+                    <button
+                      type="button"
+                      onClick={() => toggleSelected(user)}
+                      className="hover:text-red-500"
+                      aria-label={`Remove ${user.firstName}`}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
             {searchResults.length > 0 && (
               <div className="mt-2 border rounded-lg divide-y max-h-[150px] overflow-y-auto">
-                {searchResults.map((user) => (
-                  <button
-                    key={user.id}
-                    className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-50 text-left"
-                    onClick={() => handleAddMember(user.id!)}
-                  >
-                    <span>
-                      {user.firstName} {user.lastName}
-                    </span>
-                    <UserPlus className="h-4 w-4 text-green-600" />
-                  </button>
-                ))}
+                {searchResults.map((user) => {
+                  const checked = selected.has(user.id!);
+                  return (
+                    <label
+                      key={user.id}
+                      className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                    >
+                      <span className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleSelected(user)}
+                          className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                        />
+                        <span>
+                          {user.firstName} {user.lastName}
+                        </span>
+                      </span>
+                      {checked && <Check className="h-4 w-4 text-emerald-600" />}
+                    </label>
+                  );
+                })}
               </div>
             )}
             {loading && (
               <p className="text-sm text-gray-500 mt-2">Searching...</p>
+            )}
+
+            {selected.size > 0 && (
+              <div className="flex justify-end mt-3">
+                <Button
+                  onClick={handleAddSelected}
+                  disabled={submitting}
+                >
+                  {submitting
+                    ? "Adding..."
+                    : `Add ${selected.size} member${selected.size === 1 ? "" : "s"}`}
+                </Button>
+              </div>
             )}
           </div>
         </div>

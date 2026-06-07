@@ -92,6 +92,7 @@ export default function MembersTable({
     {
       id: "actions",
       header: "",
+      enableSorting: false,
       cell: ({ row }) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

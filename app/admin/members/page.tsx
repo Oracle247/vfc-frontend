@@ -13,7 +13,12 @@ import {
 import { Upload, Plus, Search } from "lucide-react";
 import { userService } from "@/services/userService";
 import { authService } from "@/services/authService";
-import { IUser, UserFilterParams, UpdateChurchJourneyPayload } from "@/types/user";
+import {
+  IUser,
+  UpdateChurchJourneyPayload,
+  UpdateUserPayload,
+  UserFilterParams,
+} from "@/types/user";
 import { PaginatedData } from "@/types/api";
 import type { RegisterPayload } from "@/types/auth";
 import MembersTable from "./_components/MembersTable";
@@ -21,6 +26,7 @@ import { ChurchJourneyDialog } from "./_components/ChurchJourneyDialog";
 import { SetPasswordDialog } from "./_components/SetPasswordDialog";
 import { BulkImportDialog } from "./_components/BulkImportDialog";
 import { RegisterMemberDialog } from "./_components/RegisterMemberDialog";
+import { EditMemberDialog } from "./_components/EditMemberDialog";
 
 export default function MembersPage() {
   const [members, setMembers] = useState<IUser[]>([]);
@@ -29,6 +35,7 @@ export default function MembersPage() {
   const [filters, setFilters] = useState<UserFilterParams>({ page: 1, limit: 20 });
 
   // Dialog states
+  const [editUser, setEditUser] = useState<IUser | null>(null);
   const [journeyUser, setJourneyUser] = useState<IUser | null>(null);
   const [passwordUser, setPasswordUser] = useState<IUser | null>(null);
   const [showImport, setShowImport] = useState(false);
@@ -66,6 +73,11 @@ export default function MembersPage() {
 
   const handleChurchJourneySave = async (id: string, data: UpdateChurchJourneyPayload) => {
     await userService.updateChurchJourney(id, data);
+    fetchMembers();
+  };
+
+  const handleEditMemberSave = async (id: string, data: UpdateUserPayload) => {
+    await userService.updateUser(id, data);
     fetchMembers();
   };
 
@@ -160,7 +172,7 @@ export default function MembersPage() {
       ) : (
         <MembersTable
           data={members}
-          onEdit={() => {}}
+          onEdit={(user) => setEditUser(user)}
           onChurchJourney={(user) => setJourneyUser(user)}
           onSetPassword={(user) => setPasswordUser(user)}
           onDelete={handleDelete}
@@ -193,6 +205,13 @@ export default function MembersPage() {
       )}
 
       {/* Dialogs */}
+      <EditMemberDialog
+        open={!!editUser}
+        onOpenChange={(open) => !open && setEditUser(null)}
+        user={editUser}
+        onSave={handleEditMemberSave}
+      />
+
       <ChurchJourneyDialog
         open={!!journeyUser}
         onOpenChange={(open) => !open && setJourneyUser(null)}

@@ -5,6 +5,7 @@ import {
     BulkMarkAttendancePayload,
     BulkMarkAttendanceResult,
     CreateAttendanceSessionPayload,
+    IAttendance,
     IAttendanceSession,
     MarkAttendancePayload,
     UpdateAttendanceSessionPayload,
@@ -54,6 +55,23 @@ export const attendanceService = {
         handleApiCall<{ success: boolean }>(
             () => apiClient.delete<ApiResponse<{ success: boolean }>>(`/attendance/session/${id}`),
             "Session deleted successfully!"
+        ),
+
+    // Edit a single attendance entry (admin: change markedAt and/or serviceOrder)
+    updateAttendance: (
+        id: string,
+        payload: { markedAt?: string; serviceOrder?: number },
+    ) =>
+        handleApiCall<IAttendance>(
+            () => apiClient.put<ApiResponse<IAttendance>>(`/attendance/${id}`, payload),
+            "Attendance updated successfully!"
+        ),
+
+    // Delete a single attendance entry
+    deleteAttendance: (id: string) =>
+        handleApiCall<{ success: boolean }>(
+            () => apiClient.delete<ApiResponse<{ success: boolean }>>(`/attendance/${id}`),
+            "Attendance deleted successfully!"
         ),
 
     // Analytics

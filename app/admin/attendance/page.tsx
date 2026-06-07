@@ -17,23 +17,29 @@ export default function AttendancePage() {
   const handleStartSession = async ({
     date,
     serviceName,
-    serviceTime,
+    services,
   }: {
     date: string;
     serviceName: string;
-    serviceTime: string;
+    services: Array<{
+      order: number;
+      serviceTime: string;
+      preServiceTime?: string | null;
+      closesAt?: string | null;
+    }>;
   }) => {
-    if (!date || !serviceName || !serviceTime) {
-      alert("Please fill in all fields before starting the session.");
-      return;
-    }
+    // startedAt anchors the session on the calendar; use the first service's
+    // serviceTime so the date+time stay in sync.
+    const startedAt = services[0]?.serviceTime ?? new Date(`${date}T00:00`).toISOString();
 
     const session = await attendanceService.startSession({
       serviceName,
-      startedAt: new Date(`${date}T${serviceTime}`),
+      date: new Date(`${date}T00:00`).toISOString(),
+      startedAt,
+      services,
     });
 
-    router.push(`attendance/${session.id}`);
+    router.push(`attendance/session?sessionId=${session.id}`);
   };
 
   return (

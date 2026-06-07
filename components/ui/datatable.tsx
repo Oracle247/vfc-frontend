@@ -14,6 +14,7 @@ import {
 } from "@tanstack/react-table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { ChevronDown, ChevronsUpDown, ChevronUp } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -81,16 +82,41 @@ export function DataTable<TData, TValue>({
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                  </TableHead>
-                ))}
+                {headerGroup.headers.map((header) => {
+                  if (header.isPlaceholder) {
+                    return <TableHead key={header.id} />;
+                  }
+                  const canSort = header.column.getCanSort();
+                  const sortDir = header.column.getIsSorted();
+                  const headerContent = flexRender(
+                    header.column.columnDef.header,
+                    header.getContext(),
+                  );
+                  return (
+                    <TableHead key={header.id}>
+                      {canSort ? (
+                        <button
+                          type="button"
+                          onClick={header.column.getToggleSortingHandler()}
+                          className="inline-flex items-center gap-1 select-none hover:text-gray-900"
+                        >
+                          {headerContent}
+                          {sortDir === "asc" && (
+                            <ChevronUp className="h-3.5 w-3.5" />
+                          )}
+                          {sortDir === "desc" && (
+                            <ChevronDown className="h-3.5 w-3.5" />
+                          )}
+                          {sortDir === false && (
+                            <ChevronsUpDown className="h-3.5 w-3.5 text-gray-300" />
+                          )}
+                        </button>
+                      ) : (
+                        headerContent
+                      )}
+                    </TableHead>
+                  );
+                })}
               </TableRow>
             ))}
           </TableHeader>

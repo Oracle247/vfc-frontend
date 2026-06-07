@@ -54,7 +54,7 @@ export default function InvoicesPage() {
       accessorKey: "invoiceNumber",
       cell: ({ row }) => (
         <button
-          onClick={() => router.push(`/admin/invoices/${row.original.id}`)}
+          onClick={() => router.push(`/admin/invoices/detail?id=${row.original.id}`)}
           className="text-blue-600 hover:underline font-medium"
         >
           {row.original.invoiceNumber}

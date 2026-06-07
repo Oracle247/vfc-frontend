@@ -7,13 +7,15 @@ import { useEffect, useState } from "react";
 import { attendanceService } from "@/services/attendanceService";
 import { DataTable } from "@/components/ui/datatable";
 import { Button } from "@/components/ui/button";
-import { Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
+import { EditSessionDialog } from "./EditSessionDialog";
 
 export default function AttendanceSessionsTable() {
   const router = useRouter();
   const [sessions, setSessions] = useState<IAttendanceSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1 });
+  const [editSession, setEditSession] = useState<IAttendanceSession | null>(null);
 
   const fetchSessions = async (page = 1) => {
     setLoading(true);
@@ -38,13 +40,35 @@ export default function AttendanceSessionsTable() {
     fetchSessions(pagination.page);
   };
 
+  const handleSaveEdit = async (
+    id: string,
+    payload: {
+      serviceName: string;
+      date: string;
+      services: Array<{
+        order: number;
+        serviceTime: string;
+        preServiceTime?: string | null;
+        closesAt?: string | null;
+      }>;
+    },
+  ) => {
+    await attendanceService.updateSession(id, {
+      serviceName: payload.serviceName,
+      date: new Date(`${payload.date}T00:00`).toISOString(),
+      services: payload.services,
+    });
+    setEditSession(null);
+    fetchSessions(pagination.page);
+  };
+
   const columns: ColumnDef<IAttendanceSession>[] = [
     {
       header: "Service Name",
       accessorKey: "serviceName",
       cell: ({ row }) => (
         <button
-          onClick={() => router.push(`/admin/attendance/${row.original.id}`)}
+          onClick={() => router.push(`/admin/attendance/session?sessionId=${row.original.id}`)}
           className="text-blue-600 hover:underline font-medium"
         >
           {row.original.serviceName}
@@ -83,18 +107,31 @@ export default function AttendanceSessionsTable() {
     {
       id: "actions",
       header: "",
+      enableSorting: false,
       cell: ({ row }) => (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="text-red-500"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleDelete(row.original.id);
-          }}
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
+        <div className="flex justify-end gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={(e) => {
+              e.stopPropagation();
+              setEditSession(row.original);
+            }}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-red-500"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete(row.original.id);
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       ),
     },
   ];
@@ -135,6 +172,13 @@ export default function AttendanceSessionsTable() {
           )}
         </>
       )}
+
+      <EditSessionDialog
+        open={!!editSession}
+        onOpenChange={(open) => !open && setEditSession(null)}
+        session={editSession}
+        onSave={handleSaveEdit}
+      />
     </div>
   );
 }

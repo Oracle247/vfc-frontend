@@ -1,11 +1,28 @@
 import { IUser } from "./user";
 
+export interface ISessionService {
+    id: string;
+    sessionId: string;
+    order: number;
+    serviceTime: string;
+    preServiceTime?: string | null;
+    closesAt?: string | null;
+}
+
+export interface SessionServiceInput {
+    order: number;
+    serviceTime: string;
+    preServiceTime?: string | null;
+    closesAt?: string | null;
+}
+
 export interface IAttendanceSession {
     id: string;
     serviceName: string;
     date?: Date;
     startedAt?: Date;
     endedAt?: Date;
+    services?: ISessionService[];
     attendees?: IAttendance[];
     createdAt: Date;
 }
@@ -17,22 +34,28 @@ export interface IAttendance {
     session?: IAttendanceSession;
     user?: IUser;
     markedAt: Date;
+    serviceOrder: number;
 }
 
 export interface CreateAttendanceSessionPayload {
     serviceName: string;
-    date?: Date;
-    startedAt: Date;
+    date?: string;
+    startedAt: string;
+    services: SessionServiceInput[];
 }
 
 export interface UpdateAttendanceSessionPayload {
     serviceName?: string;
-    endedAt?: Date;
+    date?: string;
+    startedAt?: string;
+    services?: SessionServiceInput[];
 }
 
 export interface MarkAttendancePayload {
     userId: string;
     sessionId: string;
+    markedAt?: string;
+    serviceOrder?: number;
 }
 
 export interface BulkMarkAttendancePayload {
