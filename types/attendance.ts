@@ -114,10 +114,18 @@ export interface MemberAttendancePoint {
     };
 }
 
+export type Weekday =
+    | "SUNDAY" | "MONDAY" | "TUESDAY" | "WEDNESDAY"
+    | "THURSDAY" | "FRIDAY" | "SATURDAY";
+
 export interface AttendanceTrendPoint {
     period: string;
     label: string;
     count: number;
+    /** Populated only for groupBy=session. Lets the chart split into one line per service day. */
+    serviceDayId?: string | null;
+    serviceDayName?: string | null;
+    weekday?: Weekday | null;
 }
 
 export interface AttendanceRatePoint {

@@ -122,12 +122,16 @@ export default function AttendanceSessionsTable() {
         preServiceTime?: string | null;
         closesAt?: string | null;
       }>;
+      serviceDayId?: string | null;
     },
   ) => {
     await attendanceService.updateSession(id, {
       serviceName: payload.serviceName,
       date: new Date(`${payload.date}T00:00`).toISOString(),
       services: payload.services,
+      // null clears the link; undefined leaves it alone. The dialog sends
+      // explicit null/string when the user touched the dropdown.
+      ...(payload.serviceDayId !== undefined ? { serviceDayId: payload.serviceDayId } : {}),
     });
     setEditSession(null);
     fetchSessions(pagination.page);

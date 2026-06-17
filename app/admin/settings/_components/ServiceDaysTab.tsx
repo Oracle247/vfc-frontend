@@ -3,16 +3,19 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Layers, Pencil, Plus, Trash2 } from "lucide-react";
 import { serviceDayService } from "@/services/serviceDayService";
 import { IServiceDay, WEEKDAY_LABEL } from "@/types/template";
 import { ServiceDayDialog } from "./ServiceDayDialog";
+import { VariationsDialog } from "./VariationsDialog";
 
 export function ServiceDaysTab() {
   const [days, setDays] = useState<IServiceDay[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [editTarget, setEditTarget] = useState<IServiceDay | null>(null);
+  const [variationsTarget, setVariationsTarget] = useState<IServiceDay | null>(null);
 
   const refresh = async () => {
     setLoading(true);
@@ -80,6 +83,14 @@ export function ServiceDaysTab() {
                     <Button
                       variant="ghost"
                       size="icon"
+                      title="Manage variations"
+                      onClick={() => setVariationsTarget(day)}
+                    >
+                      <Layers className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       onClick={() => setEditTarget(day)}
                     >
                       <Pencil className="h-4 w-4" />
@@ -103,6 +114,15 @@ export function ServiceDaysTab() {
                     </li>
                   ))}
                 </ul>
+                {(day.variations?.length ?? 0) > 0 && (
+                  <div className="flex flex-wrap gap-1 pt-1">
+                    {day.variations!.map((v) => (
+                      <Badge key={v.id} variant="outline" className="text-[10px]">
+                        {v.name} ({v.services.length})
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}
@@ -120,6 +140,13 @@ export function ServiceDaysTab() {
         onOpenChange={(open) => !open && setEditTarget(null)}
         initial={editTarget}
         onSave={handleUpdate}
+      />
+
+      <VariationsDialog
+        open={!!variationsTarget}
+        onOpenChange={(open) => !open && setVariationsTarget(null)}
+        day={variationsTarget}
+        onChanged={refresh}
       />
     </div>
   );

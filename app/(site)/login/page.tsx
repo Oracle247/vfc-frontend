@@ -18,6 +18,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Church } from "lucide-react";
 import { authService } from "@/services/authService";
+import { userService } from "@/services/userService";
+import { resetCurrentUserCache } from "@/hooks/use-current-user";
 import Link from "next/link";
 
 const loginSchema = z.object({
@@ -40,7 +42,14 @@ export default function LoginPage() {
     setIsSubmitting(true);
     try {
       await authService.login(values);
-      router.push("/admin");
+      // Fresh /me fetch so role + permissions reflect this login. Drop the
+      // module-level cache first so the next consumer doesn't see a stale
+      // anonymous state.
+      resetCurrentUserCache();
+      const me = await userService.getMe().catch(() => null);
+      // Backend already blocks non-ACTIVE accounts on the login call itself;
+      // this is a belt-and-braces guard if the token somehow survived.
+      router.push(me?.role === "ADMIN" ? "/admin" : "/dashboard");
     } catch {
       // Error toast handled by handleApiCall
     } finally {

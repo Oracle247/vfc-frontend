@@ -15,13 +15,14 @@ import { X, Search, Crown, Check } from "lucide-react";
 import { IDepartment } from "@/types/department";
 import { IUser } from "@/types/user";
 import { userService } from "@/services/userService";
-import { debounce } from "lodash";
 
 interface ManageMembersDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   department: IDepartment | null;
   onAssignHead: (deptId: string, userId: string) => Promise<void>;
+  onAssignAssistantHead: (deptId: string, userId: string) => Promise<void>;
+  onRemoveAsstHead: (deptId: string, userId: string) => Promise<void>;
   onRemoveHead: (deptId: string) => Promise<void>;
   onAddMembers: (deptId: string, userIds: string[]) => Promise<void>;
   onRemoveMembers: (deptId: string, userIds: string[]) => Promise<void>;
@@ -32,43 +33,65 @@ export function ManageMembersDialog({
   onOpenChange,
   department,
   onAssignHead,
+  onAssignAssistantHead,
   onRemoveHead,
+  onRemoveAsstHead,
   onAddMembers,
   onRemoveMembers,
 }: ManageMembersDialogProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchMemberQuery, setSearchMemberQuery] = useState("");
   const [searchResults, setSearchResults] = useState<IUser[]>([]);
   const [loading, setLoading] = useState(false);
-  // Map keeps the IUser around so chips can render even after the search
-  // query changes and the user falls out of `searchResults`.
+  const [departmentMembers, setDepartmentMembers] = useState<Partial<IUser>[]>([]);
   const [selected, setSelected] = useState<Map<string, IUser>>(new Map());
   const [submitting, setSubmitting] = useState(false);
 
-  const searchUsers = debounce(async (query: string) => {
-    if (query.trim().length < 2) {
-      setSearchResults([]);
-      return;
-    }
-    setLoading(true);
-    try {
-      const results = await userService.searchUsers(query);
-      // Filter out users already in the department
-      const memberIds = new Set(department?.members?.map((m) => m.id) || []);
-      setSearchResults(results.filter((u) => !memberIds.has(u.id)));
-    } finally {
-      setLoading(false);
-    }
-  }, 400);
 
   useEffect(() => {
-    searchUsers(searchQuery);
-  }, [searchQuery]);
+    const query = searchQuery.trim();
+    if (query.length < 2) {
+      setSearchResults([]);
+      setLoading(false);
+      return;
+    }
+    const timeout = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const results = await userService.searchUsers(query);
+        const memberIds = new Set(department?.members?.map((m) => m.id) || []);
+        setSearchResults(results.filter((u) => !memberIds.has(u.id)));
+      } finally {
+        setLoading(false);
+      }
+    }, 400);
+    return () => clearTimeout(timeout);
+  }, [searchQuery, department?.id, department?.members]);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      const all = department?.members ?? [];
+      const q = searchMemberQuery.trim().toLowerCase();
+      if (!q) {
+        setDepartmentMembers(all);
+        return;
+      }
+      setDepartmentMembers(
+        all.filter((m) =>
+          `${m.firstName ?? ""} ${m.lastName ?? ""}`.toLowerCase().includes(q) ||
+          (m.email ?? "").toLowerCase().includes(q),
+        ),
+      );
+    }, 200);
+    return () => clearTimeout(timeout);
+  }, [searchMemberQuery, department?.members]);
 
   // Reset the picker whenever the dialog closes or the target department changes.
   useEffect(() => {
     setSelected(new Map());
     setSearchQuery("");
     setSearchResults([]);
+    setSearchMemberQuery("");
   }, [department?.id, open]);
 
   const toggleSelected = (user: IUser) => {
@@ -105,9 +128,19 @@ export function ManageMembersDialog({
     await onAssignHead(department.id, userId);
   };
 
+  const handleMakeAssistantHead = async (userId: string) => {
+    if (!department) return;
+    await onAssignAssistantHead(department.id, userId);
+  };
+
   const handleRemoveHead = async () => {
     if (!department) return;
     await onRemoveHead(department.id);
+  };
+
+  const handleRemoveAsstHead = async (userId: string) => {
+    if (!department) return;
+    await onRemoveAsstHead(department.id, userId);
   };
 
   return (
@@ -146,13 +179,57 @@ export function ManageMembersDialog({
             )}
           </div>
 
+          {/* Asst Head */}
+          <div>
+            <h3 className="text-sm font-semibold mb-2">
+              Department Asst Heads
+            </h3>
+            {department?.assistantHeads ? (
+              department.assistantHeads.map((asstHead) => (
+                <div
+                  key={asstHead.id}
+                  className="flex items-center justify-between bg-gray-50 rounded-lg p-3"
+                >
+                  <div className="flex items-center gap-2">
+                    <Crown className="h-4 w-4 text-gray-500" />
+                    <span className="font-medium">
+                      {asstHead.firstName} {asstHead.lastName}
+                    </span>
+                    <span className="text-sm text-gray-500">
+                      {asstHead.email}
+                    </span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-red-500"
+                    onClick={() => handleRemoveAsstHead(asstHead.id ?? "")}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-gray-500">No head assigned</p>
+            )}
+          </div>
+
           {/* Members */}
           <div>
             <h3 className="text-sm font-semibold mb-2">
               Members ({department?.members?.length || 0})
             </h3>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search users by name..."
+                className="pl-9"
+                value={searchMemberQuery}
+                onChange={(e) => setSearchMemberQuery(e.target.value)}
+              />
+            </div>
             <div className="space-y-1 max-h-[200px] overflow-y-auto">
-              {department?.members?.map((member) => (
+              {departmentMembers.map((member) => (
                 <div
                   key={member.id}
                   className="flex items-center justify-between py-2 px-3 rounded hover:bg-gray-50"
@@ -161,14 +238,40 @@ export function ManageMembersDialog({
                     <span className="font-medium">
                       {member.firstName} {member.lastName}
                     </span>
-                    {department.headId === member.id && (
-                      <Badge className="ml-2 bg-yellow-100 text-yellow-800" variant="outline">
+                    {department?.headId === member.id && (
+                      <Badge
+                        className="ml-2 bg-yellow-100 text-yellow-800"
+                        variant="outline"
+                      >
                         Head
+                      </Badge>
+                    )}
+                    {(department?.assistantHeads ?? []).some(
+                      (h) => h.id == member.id,
+                    ) && (
+                      <Badge
+                        className="ml-2 bg-gray-100 text-gray-800"
+                        variant="outline"
+                      >
+                        Asst Head
                       </Badge>
                     )}
                   </div>
                   <div className="flex gap-1">
-                    {department.headId !== member.id && (
+                    {!(department?.assistantHeads ?? []).some(
+                      (h) => h.id === member.id,
+                    ) && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        title="Make Asst Head"
+                        onClick={() => handleMakeAssistantHead(member.id!)}
+                      >
+                        <Crown className="h-4 w-4 text-gray-500" />
+                      </Button>
+                    )}
+
+                    {department?.headId !== member.id && (
                       <Button
                         variant="ghost"
                         size="sm"
@@ -189,9 +292,11 @@ export function ManageMembersDialog({
                   </div>
                 </div>
               ))}
-              {!department?.members?.length && (
+              {!department?.members?.length ? (
                 <p className="text-sm text-gray-500 py-2">No members yet</p>
-              )}
+              ) : departmentMembers.length === 0 && searchMemberQuery.trim().length > 0 ? (
+                <p className="text-sm text-gray-500 py-2">No matches for &quot;{searchMemberQuery}&quot;</p>
+              ) : null}
             </div>
           </div>
 
@@ -250,7 +355,9 @@ export function ManageMembersDialog({
                           {user.firstName} {user.lastName}
                         </span>
                       </span>
-                      {checked && <Check className="h-4 w-4 text-emerald-600" />}
+                      {checked && (
+                        <Check className="h-4 w-4 text-emerald-600" />
+                      )}
                     </label>
                   );
                 })}
@@ -262,10 +369,7 @@ export function ManageMembersDialog({
 
             {selected.size > 0 && (
               <div className="flex justify-end mt-3">
-                <Button
-                  onClick={handleAddSelected}
-                  disabled={submitting}
-                >
+                <Button onClick={handleAddSelected} disabled={submitting}>
                   {submitting
                     ? "Adding..."
                     : `Add ${selected.size} member${selected.size === 1 ? "" : "s"}`}

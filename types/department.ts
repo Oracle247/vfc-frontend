@@ -7,6 +7,7 @@ export interface IDepartment {
     headId?: string;
     head?: Pick<IUser, "id" | "firstName" | "lastName" | "email">;
     members?: Pick<IUser, "id" | "firstName" | "lastName" | "email">[];
+    assistantHeads?: Pick<IUser, "id" | "firstName" | "lastName" | "email">[];
 }
 
 export interface CreateDepartmentPayload {

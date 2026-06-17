@@ -11,7 +11,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { IAttendanceSession, SessionServiceInput } from "@/types/attendance";
+import { IServiceDay } from "@/types/template";
+import { serviceDayService } from "@/services/serviceDayService";
 import {
   ServicesEditor,
   rowsToServicesPayload,
@@ -19,6 +28,8 @@ import {
   isoServicesToFormRows,
   type ServiceFormRow,
 } from "./ServicesEditor";
+
+const NONE = "__NONE__";
 
 interface EditSessionDialogProps {
   open: boolean;
@@ -30,6 +41,7 @@ interface EditSessionDialogProps {
       serviceName: string;
       date: string;
       services: SessionServiceInput[];
+      serviceDayId?: string | null;
     },
   ) => Promise<void>;
 }
@@ -48,6 +60,15 @@ export function EditSessionDialog({
   const [multi, setMulti] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [serviceDays, setServiceDays] = useState<IServiceDay[]>([]);
+  const [serviceDayId, setServiceDayId] = useState<string>(NONE);
+  const [serviceDayDirty, setServiceDayDirty] = useState(false);
+
+  // Load templates once so the picker stays populated across dialog reopens.
+  useEffect(() => {
+    if (!open) return;
+    serviceDayService.list().then((rows) => setServiceDays(rows ?? [])).catch(() => setServiceDays([]));
+  }, [open]);
 
   useEffect(() => {
     if (!session) return;
@@ -58,6 +79,8 @@ export function EditSessionDialog({
     setDate(parsedDate || (session.startedAt ? new Date(session.startedAt).toISOString().slice(0, 10) : ""));
     setRows(parsedRows);
     setMulti(parsedMulti);
+    setServiceDayId(session.serviceDayId ?? NONE);
+    setServiceDayDirty(false);
     setError(null);
   }, [session, open]);
 
@@ -74,6 +97,10 @@ export function EditSessionDialog({
         serviceName: serviceName.trim(),
         date,
         services: rowsToServicesPayload(date, rows),
+        // Only forward the link when the user touched the picker. Sending it
+        // unchanged on every save would clobber any SpecialProgram link the
+        // session might still have.
+        ...(serviceDayDirty ? { serviceDayId: serviceDayId === NONE ? null : serviceDayId } : {}),
       });
       onOpenChange(false);
     } finally {
@@ -104,6 +131,35 @@ export function EditSessionDialog({
               value={date}
               onChange={(e) => setDate(e.target.value)}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Service Day</Label>
+            <Select
+              value={serviceDayId}
+              onValueChange={(v) => {
+                setServiceDayId(v);
+                setServiceDayDirty(true);
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Pick a service day" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NONE}>None / Unassigned</SelectItem>
+                {serviceDays.map((d) => (
+                  <SelectItem key={d.id} value={d.id}>
+                    {d.name}
+                    <span className="text-gray-400 ml-1">
+                      ({d.weekday.charAt(0) + d.weekday.slice(1).toLowerCase()})
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-gray-500">
+              Assign this session to a service day so it groups correctly in attendance trends.
+            </p>
           </div>
 
           <ServicesEditor

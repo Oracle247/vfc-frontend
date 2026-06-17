@@ -1,5 +1,5 @@
 import apiClient from "@/lib/apiClient";
-import { IUser, UpdateChurchJourneyPayload, UserFilterParams, BulkImportResult } from "@/types/user";
+import { AccountStatus, IUser, UpdateChurchJourneyPayload, UserFilterParams, BulkImportResult } from "@/types/user";
 import { ApiResponse, PaginatedData } from "@/types/api";
 import { handleApiCall } from "@/lib/utils";
 
@@ -59,6 +59,15 @@ export const userService = {
         handleApiCall<IUser>(
             () => apiClient.delete<ApiResponse<IUser>>(`/user/${id}`),
             "User deleted successfully!"
+        ),
+
+    updateAccountStatus: (id: string, accountStatus: AccountStatus) =>
+        handleApiCall<{ id: string; accountStatus: AccountStatus }>(
+            () => apiClient.patch<ApiResponse<{ id: string; accountStatus: AccountStatus }>>(
+                `/user/${id}/status`,
+                { accountStatus },
+            ),
+            "Account status updated",
         ),
 
     bulkImport: (file: File) => {

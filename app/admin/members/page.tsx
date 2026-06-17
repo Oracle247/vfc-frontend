@@ -14,6 +14,7 @@ import { Upload, Plus, Search } from "lucide-react";
 import { userService } from "@/services/userService";
 import { authService } from "@/services/authService";
 import {
+  AccountStatus,
   IUser,
   UpdateChurchJourneyPayload,
   UpdateUserPayload,
@@ -29,8 +30,15 @@ import { RegisterMemberDialog } from "./_components/RegisterMemberDialog";
 import { EditMemberDialog } from "./_components/EditMemberDialog";
 
 // Members view is scoped to churchStatus=MEMBER. First timers + visitors live
-// at /admin/visitors so the lists stay focused.
-const MEMBERS_ONLY: UserFilterParams = { page: 1, limit: 20, churchStatus: "MEMBER" };
+// at /admin/visitors so the lists stay focused. Default accountStatus filter
+// to ACTIVE so suspended/archived users don't clutter the list — admins can
+// flip to "all" or a specific status when needed.
+const MEMBERS_ONLY: UserFilterParams = {
+  page: 1,
+  limit: 20,
+  churchStatus: "MEMBER",
+  accountStatus: "ACTIVE",
+};
 
 export default function MembersPage() {
   const [members, setMembers] = useState<IUser[]>([]);
@@ -63,10 +71,6 @@ export default function MembersPage() {
     fetchMembers();
   }, [fetchMembers]);
 
-  // Debounced search: as the user types, push the value into filters after
-  // 300ms of inactivity. This replaces the old click-or-Enter pattern, which
-  // was the "type and nothing happens" bug — keystrokes never reached the
-  // backend until the user pressed Enter.
   useEffect(() => {
     const timeout = setTimeout(() => {
       setFilters((prev) => {
@@ -129,6 +133,13 @@ export default function MembersPage() {
     fetchMembers();
   };
 
+  const handleUpdateStatus = async (user: IUser, status: AccountStatus) => {
+    if (!user.id) return;
+    if (!confirm(`Set ${user.firstName} ${user.lastName} to ${status}?`)) return;
+    await userService.updateAccountStatus(user.id, status);
+    fetchMembers();
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -174,6 +185,22 @@ export default function MembersPage() {
             <SelectItem value="ADMIN">Admin</SelectItem>
           </SelectContent>
         </Select>
+
+        <Select
+          value={filters.accountStatus || "ALL"}
+          onValueChange={(v) => handleFilterChange("accountStatus", v)}
+        >
+          <SelectTrigger className="w-[160px]">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All Statuses</SelectItem>
+            <SelectItem value="ACTIVE">Active</SelectItem>
+            <SelectItem value="INACTIVE">Inactive</SelectItem>
+            <SelectItem value="SUSPENDED">Suspended</SelectItem>
+            <SelectItem value="ARCHIVED">Archived</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Table */}
@@ -187,6 +214,7 @@ export default function MembersPage() {
           onSetPassword={(user) => setPasswordUser(user)}
           onDelete={handleDelete}
           onSendInvite={handleSendInvite}
+          onUpdateStatus={handleUpdateStatus}
         />
       )}
 

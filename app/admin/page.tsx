@@ -3,19 +3,11 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Activity, Calendar, Loader2 } from "lucide-react";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
 import { attendanceService } from "@/services/attendanceService";
 import { userService } from "@/services/userService";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import ExcoHome from "./_components/ExcoHome";
+import AttendanceTrendBlock from "@/components/AttendanceTrendBlock";
 
 interface CardData {
   loading: boolean;
@@ -46,8 +38,6 @@ function AdminDashboard() {
     loading: true,
     value: "…",
   });
-  const [chart, setChart] = useState<Array<{ label: string; count: number }>>([]);
-  const [chartLoading, setChartLoading] = useState(true);
 
   useEffect(() => {
     // Card 1 — total members
@@ -91,19 +81,6 @@ function AdminDashboard() {
         });
       })
       .catch(() => setSessionsThisMonth(empty()));
-
-    // Chart — most recent ~12 sessions
-    attendanceService
-      .getAttendanceTrend({ groupBy: "session" })
-      .then((rows) => {
-        const last = rows.slice(-12).map((r) => ({
-          label: r.label,
-          count: r.count,
-        }));
-        setChart(last);
-      })
-      .catch(() => setChart([]))
-      .finally(() => setChartLoading(false));
   }, []);
 
   const renderCard = (
@@ -169,32 +146,7 @@ function AdminDashboard() {
           <CardTitle>Attendance Trends</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-[300px]">
-            {chartLoading ? (
-              <div className="h-full flex items-center justify-center text-gray-400">
-                <Loader2 className="h-5 w-5 animate-spin" />
-              </div>
-            ) : chart.length === 0 ? (
-              <div className="h-full flex items-center justify-center text-gray-400 text-sm">
-                No session data yet
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chart}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="label" />
-                  <YAxis allowDecimals={false} />
-                  <Tooltip />
-                  <Line
-                    type="monotone"
-                    dataKey="count"
-                    stroke="#8884d8"
-                    strokeWidth={2}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            )}
-          </div>
+          <AttendanceTrendBlock height={300} />
         </CardContent>
       </Card>
     </div>

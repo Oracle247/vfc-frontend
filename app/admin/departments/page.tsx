@@ -19,14 +19,19 @@ export default function DepartmentsPage() {
 
   // Dialog states
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [editDepartment, setEditDepartment] = useState<IDepartment | null>(null);
-  const [manageDepartment, setManageDepartment] = useState<IDepartment | null>(null);
+  const [editDepartment, setEditDepartment] = useState<IDepartment | null>(
+    null,
+  );
+  const [manageDepartment, setManageDepartment] = useState<IDepartment | null>(
+    null,
+  );
   const [showImport, setShowImport] = useState(false);
 
   const fetchDepartments = useCallback(async (page = 1) => {
     setLoading(true);
     try {
-      const result: PaginatedData<IDepartment> = await departmentService.getAllDepartments({ page, limit: 20 });
+      const result: PaginatedData<IDepartment> =
+        await departmentService.getAllDepartments({ page, limit: 20 });
       setDepartments(result.data);
       setPagination({ page: result.page, totalPages: result.totalPages });
     } catch {
@@ -63,8 +68,20 @@ export default function DepartmentsPage() {
     refreshDepartmentInList(updated);
   };
 
+  const handleAssignAssistantHead = async (deptId: string, userId: string) => {
+    const updated = await departmentService.assignAssistantHead(deptId, [
+      userId,
+    ]);
+    refreshDepartmentInList(updated);
+  };
+
   const handleRemoveHead = async (deptId: string) => {
     const updated = await departmentService.removeHead(deptId);
+    refreshDepartmentInList(updated);
+  };
+
+   const handleRemoveAsstHead = async (deptId: string, userId: string) => {
+    const updated = await departmentService.removeAssistantHead(deptId, [userId]);
     refreshDepartmentInList(updated);
   };
 
@@ -80,7 +97,7 @@ export default function DepartmentsPage() {
 
   const refreshDepartmentInList = (updated: IDepartment) => {
     setDepartments((prev) =>
-      prev.map((d) => (d.id === updated.id ? updated : d))
+      prev.map((d) => (d.id === updated.id ? updated : d)),
     );
     // Also refresh the manage dialog if it's open for this department
     if (manageDepartment?.id === updated.id) {
@@ -112,7 +129,9 @@ export default function DepartmentsPage() {
       </div>
 
       {loading ? (
-        <div className="text-center py-12 text-gray-500">Loading departments...</div>
+        <div className="text-center py-12 text-gray-500">
+          Loading departments...
+        </div>
       ) : departments.length === 0 ? (
         <div className="text-center py-12 text-gray-500">
           No departments yet. Create one or import from Excel.
@@ -154,6 +173,16 @@ export default function DepartmentsPage() {
                     {dept.head
                       ? `${dept.head.firstName} ${dept.head.lastName}`
                       : "No head assigned"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Crown className="h-4 w-4 text-gray-500" />
+                  <span className="text-sm">
+                    {dept.assistantHeads && dept.assistantHeads.length > 0
+                      ? dept.assistantHeads
+                          .map((h) => `${h.firstName} ${h.lastName}`)
+                          .join(", ")
+                      : "No Asst Head assigned"}
                   </span>
                 </div>
 
@@ -223,7 +252,9 @@ export default function DepartmentsPage() {
         onOpenChange={(open) => !open && setManageDepartment(null)}
         department={manageDepartment}
         onAssignHead={handleAssignHead}
+        onAssignAssistantHead={handleAssignAssistantHead}
         onRemoveHead={handleRemoveHead}
+        onRemoveAsstHead={handleRemoveAsstHead}
         onAddMembers={handleAddMembers}
         onRemoveMembers={handleRemoveMembers}
       />

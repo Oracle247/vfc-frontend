@@ -116,7 +116,13 @@ export const attendanceService = {
             () => apiClient.get<ApiResponse<MemberAttendancePoint[]>>(`/attendance/analytics/member-history/${userId}`)
         ),
 
-    getAttendanceTrend: (params?: { groupBy?: string }) =>
+    /** Personal attendance history for the authenticated user. */
+    getMyAttendances: () =>
+        handleApiCall<MemberAttendancePoint[]>(
+            () => apiClient.get<ApiResponse<MemberAttendancePoint[]>>(`/attendance/me`)
+        ),
+
+    getAttendanceTrend: (params?: { groupBy?: string, departmentId?: string }) =>
         handleApiCall<AttendanceTrendPoint[]>(
             () => apiClient.get<ApiResponse<AttendanceTrendPoint[]>>("/attendance/analytics/trend", { params })
         ),

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
@@ -9,6 +9,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
 import {
   LineChart,
   Line,
@@ -27,10 +29,13 @@ export default function MemberAttendanceCurve() {
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [history, setHistory] = useState<MemberAttendancePoint[]>([]);
   const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
+    // Pull a wider pool so the search has something useful to filter against.
+    // (Top-members analytics caps at 50 by default — bump for the picker.)
     attendanceService
-      .getTopMembers({ limit: 50 })
+      .getTopMembers({ limit: 500 })
       .then(setMembers)
       .catch(() => setMembers([]));
   }, []);
@@ -45,6 +50,15 @@ export default function MemberAttendanceCurve() {
       .finally(() => setLoading(false));
   }, []);
 
+  const filteredMembers = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return members;
+    return members.filter((m) =>
+      `${m.firstName} ${m.lastName}`.toLowerCase().includes(q) ||
+      (m.email ?? "").toLowerCase().includes(q),
+    );
+  }, [members, search]);
+
   const chartData = history.map((h, index) => ({
     name: format(new Date(h.session.startedAt), "MMM dd"),
     session: h.session.serviceName,
@@ -53,20 +67,37 @@ export default function MemberAttendanceCurve() {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
+      <CardHeader className="flex flex-row items-center justify-between gap-2 flex-wrap">
         <CardTitle>Individual Attendance</CardTitle>
-        <Select value={selectedUserId} onValueChange={fetchHistory}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Select a member" />
-          </SelectTrigger>
-          <SelectContent>
-            {members.map((m) => (
-              <SelectItem key={m.id} value={m.id}>
-                {m.firstName} {m.lastName}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search member…"
+              className="w-[200px] pl-9 h-9"
+            />
+          </div>
+          <Select value={selectedUserId} onValueChange={fetchHistory}>
+            <SelectTrigger className="w-[220px]">
+              <SelectValue placeholder="Select a member" />
+            </SelectTrigger>
+            <SelectContent>
+              {filteredMembers.length === 0 ? (
+                <div className="px-2 py-2 text-sm text-gray-500">
+                  {search ? "No matches" : "No members yet"}
+                </div>
+              ) : (
+                filteredMembers.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>
+                    {m.firstName} {m.lastName}
+                  </SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
+        </div>
       </CardHeader>
       <CardContent>
         {!selectedUserId ? (

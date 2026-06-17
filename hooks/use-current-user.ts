@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { userService } from "@/services/userService";
-import { IUser } from "@/types/user";
+import { IUser, PermissionKey } from "@/types/user";
 
 type Status = "loading" | "ready" | "anonymous";
 
@@ -12,6 +12,13 @@ interface CurrentUserState {
   /** True when the user is a WORKER with workerType === EXECUTIVE. */
   isExco: boolean;
   isAdmin: boolean;
+  /** True when the user heads or assists at least one department. */
+  isAnyDeptExec: boolean;
+  /**
+   * Convenience: check a permission scoped to a department. Returns false
+   * during `loading`/`anonymous` so call sites don't need a separate guard.
+   */
+  canInDept: (deptId: string, key: PermissionKey) => boolean;
 }
 
 /**
@@ -43,26 +50,46 @@ export const resetCurrentUserCache = () => {
   cached = null;
 };
 
+const NEVER_CAN = (_deptId: string, _key: PermissionKey) => false;
+
+const empty = (status: Status): CurrentUserState => ({
+  user: null,
+  status,
+  isExco: false,
+  isAdmin: false,
+  isAnyDeptExec: false,
+  canInDept: NEVER_CAN,
+});
+
 export function useCurrentUser(): CurrentUserState {
-  const [state, setState] = useState<CurrentUserState>({
-    user: null,
-    status: "loading",
-    isExco: false,
-    isAdmin: false,
-  });
+  const [state, setState] = useState<CurrentUserState>(() => empty("loading"));
 
   useEffect(() => {
     let cancelled = false;
     fetchOnce().then((u) => {
       if (cancelled) return;
       if (!u) {
-        setState({ user: null, status: "anonymous", isExco: false, isAdmin: false });
+        setState(empty("anonymous"));
         return;
       }
       const isAdmin = u.role === "ADMIN";
       const isExco =
         u.role === "WORKER" && u.workerType === "EXECUTIVE";
-      setState({ user: u, status: "ready", isExco, isAdmin });
+      const isAnyDeptExec =
+        (u.headedDepartments?.length ?? 0) > 0 ||
+        (u.assistantDepartments?.length ?? 0) > 0;
+      const perms = u.permissionsByDepartment ?? {};
+      const canInDept = (deptId: string, key: PermissionKey) =>
+        (perms[deptId] ?? []).includes(key);
+
+      setState({
+        user: u,
+        status: "ready",
+        isExco,
+        isAdmin,
+        isAnyDeptExec,
+        canInDept,
+      });
     });
     return () => {
       cancelled = true;

@@ -31,6 +31,16 @@ export interface IServiceDay {
     name: string;
     weekday: Weekday;
     services: IServiceTemplate[];
+    variations?: IServiceDayVariation[];
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface IServiceDayVariation {
+    id: string;
+    serviceDayId: string;
+    name: string;
+    services: IServiceTemplate[];
     createdAt: string;
     updatedAt: string;
 }
@@ -44,6 +54,16 @@ export interface CreateServiceDayPayload {
 export interface UpdateServiceDayPayload {
     name?: string;
     weekday?: Weekday;
+    services?: ServiceTemplateInput[];
+}
+
+export interface CreateVariationPayload {
+    name: string;
+    services: ServiceTemplateInput[];
+}
+
+export interface UpdateVariationPayload {
+    name?: string;
     services?: ServiceTemplateInput[];
 }
 

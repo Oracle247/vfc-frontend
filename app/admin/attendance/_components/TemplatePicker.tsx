@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -32,6 +32,7 @@ interface Props {
 
 const DAY_PREFIX = "day:";
 const PROG_PREFIX = "prog:";
+const DEFAULT_VARIATION = "__DEFAULT__";
 
 const templateToFormRows = (
   services: { serviceTime: string; preServiceTime?: string | null; closesAt?: string | null }[],
@@ -45,6 +46,9 @@ const templateToFormRows = (
 export function TemplatePicker({ value, onChange, disabled }: Props) {
   const [days, setDays] = useState<IServiceDay[]>([]);
   const [programs, setPrograms] = useState<ISpecialProgram[]>([]);
+  // Per-day variation choice. Resets when the day changes. DEFAULT = use the
+  // day's own services. Otherwise = use the named variation's services.
+  const [variationId, setVariationId] = useState<string>(DEFAULT_VARIATION);
 
   useEffect(() => {
     serviceDayService.list().then(setDays).catch(() => setDays([]));
@@ -57,7 +61,15 @@ export function TemplatePicker({ value, onChange, disabled }: Props) {
       : `${PROG_PREFIX}${value.id}`
     : "";
 
+  // Variations on the currently-picked ServiceDay (if any). SpecialPrograms
+  // have no variations, so this stays empty for them.
+  const currentDayVariations = useMemo(() => {
+    if (!value || value.kind !== "day") return [];
+    return days.find((d) => d.id === value.id)?.variations ?? [];
+  }, [value, days]);
+
   const handleChange = (raw: string) => {
+    setVariationId(DEFAULT_VARIATION);
     if (raw.startsWith(DAY_PREFIX)) {
       const id = raw.slice(DAY_PREFIX.length);
       const day = days.find((d) => d.id === id);
@@ -77,6 +89,35 @@ export function TemplatePicker({ value, onChange, disabled }: Props) {
           : undefined,
       );
     }
+  };
+
+  const handleVariationChange = (next: string) => {
+    setVariationId(next);
+    if (!value || value.kind !== "day") return;
+    const day = days.find((d) => d.id === value.id);
+    if (!day) return;
+
+    if (next === DEFAULT_VARIATION) {
+      // Re-emit the day's own services. The TemplateLink doesn't change, but
+      // the parent needs the prefill to reset its rows.
+      onChange(
+        { kind: "day", id: day.id },
+        { serviceName: day.name, rows: templateToFormRows(day.services) },
+      );
+      return;
+    }
+
+    const variation = (day.variations ?? []).find((v) => v.id === next);
+    if (!variation) return;
+    onChange(
+      { kind: "day", id: day.id },
+      {
+        // Suffix the day's name so the operator can see which preset is in
+        // play on the form below the picker. They can still edit it.
+        serviceName: `${day.name} — ${variation.name}`,
+        rows: templateToFormRows(variation.services),
+      },
+    );
   };
 
   return (
@@ -118,6 +159,29 @@ export function TemplatePicker({ value, onChange, disabled }: Props) {
           )}
         </SelectContent>
       </Select>
+
+      {currentDayVariations.length > 0 && (
+        <div className="space-y-1">
+          <Label className="text-xs">Variation</Label>
+          <Select value={variationId} onValueChange={handleVariationChange} disabled={disabled}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={DEFAULT_VARIATION}>Default ({/* services count */}
+                {days.find((d) => value && value.kind === "day" && d.id === value.id)?.services.length ?? 0}{" "}
+                services)
+              </SelectItem>
+              {currentDayVariations.map((v) => (
+                <SelectItem key={v.id} value={v.id}>
+                  {v.name} ({v.services.length} {v.services.length === 1 ? "service" : "services"})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       <p className="text-xs text-gray-500">
         Selecting a template prefills the service name and service rows below.
         You can still edit any value before saving.
