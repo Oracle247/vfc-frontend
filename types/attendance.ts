@@ -1,4 +1,5 @@
 import { IUser } from "./user";
+import { ISessionIncome } from "./income";
 
 export interface ISessionService {
     id: string;
@@ -7,6 +8,7 @@ export interface ISessionService {
     serviceTime: string;
     preServiceTime?: string | null;
     closesAt?: string | null;
+    incomes?: ISessionIncome[];
 }
 
 export interface SessionServiceInput {
@@ -23,6 +25,18 @@ export interface IAttendanceSession {
     startedAt?: Date;
     endedAt?: Date;
     services?: ISessionService[];
+    serviceDayId?: string | null;
+    serviceDay?: {
+        id: string;
+        name: string;
+        weekday: string;
+    } | null;
+    specialProgramId?: string | null;
+    specialProgram?: {
+        id: string;
+        name: string;
+        date?: string | null;
+    } | null;
     attendees?: IAttendance[];
     createdAt: Date;
 }
@@ -41,6 +55,8 @@ export interface CreateAttendanceSessionPayload {
     serviceName: string;
     date?: string;
     startedAt: string;
+    serviceDayId?: string | null;
+    specialProgramId?: string | null;
     services: SessionServiceInput[];
 }
 
@@ -48,6 +64,8 @@ export interface UpdateAttendanceSessionPayload {
     serviceName?: string;
     date?: string;
     startedAt?: string;
+    serviceDayId?: string | null;
+    specialProgramId?: string | null;
     services?: SessionServiceInput[];
 }
 

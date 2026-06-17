@@ -18,6 +18,8 @@ export default function AttendancePage() {
     date,
     serviceName,
     services,
+    serviceDayId,
+    specialProgramId,
   }: {
     date: string;
     serviceName: string;
@@ -27,6 +29,8 @@ export default function AttendancePage() {
       preServiceTime?: string | null;
       closesAt?: string | null;
     }>;
+    serviceDayId?: string | null;
+    specialProgramId?: string | null;
   }) => {
     // startedAt anchors the session on the calendar; use the first service's
     // serviceTime so the date+time stay in sync.
@@ -37,6 +41,8 @@ export default function AttendancePage() {
       date: new Date(`${date}T00:00`).toISOString(),
       startedAt,
       services,
+      serviceDayId: serviceDayId ?? null,
+      specialProgramId: specialProgramId ?? null,
     });
 
     router.push(`attendance/session?sessionId=${session.id}`);

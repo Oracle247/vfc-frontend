@@ -14,6 +14,7 @@ import {
   Building2,
   FileText,
   UserCheck,
+  UserPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -24,19 +25,34 @@ interface SidebarProps {
   setIsOpen: (isOpen: boolean) => void;
 }
 
+import { useCurrentUser } from "@/hooks/use-current-user";
+
+const ADMIN_ITEMS = [
+  { title: "Dashboard", href: "/admin", icon: BarChart3 },
+  { title: "Members", href: "/admin/members", icon: Users },
+  { title: "First Timers & Visitors", href: "/admin/visitors", icon: UserPlus },
+  { title: "Attendance", href: "/admin/attendance", icon: UserCheck },
+  { title: "Departments", href: "/admin/departments", icon: Building2 },
+  { title: "Invoices", href: "/admin/invoices", icon: FileText },
+  { title: "Events", href: "/admin/events", icon: CalendarDays },
+  { title: "Settings", href: "/admin/settings", icon: Settings },
+];
+
+// Excos see a read-only subset: dashboard + the data surfaces they need.
+// No Settings, no edits.
+const EXCO_ITEMS = [
+  { title: "Dashboard", href: "/admin", icon: BarChart3 },
+  { title: "Members", href: "/admin/members", icon: Users },
+  { title: "Attendance", href: "/admin/attendance", icon: UserCheck },
+  { title: "Departments", href: "/admin/departments", icon: Building2 },
+];
+
 const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
   const pathname = usePathname();
   const router = useRouter();
+  const { isExco } = useCurrentUser();
 
-  const sidebarItems = [
-    { title: "Dashboard", href: "/admin", icon: BarChart3 },
-    { title: "Members", href: "/admin/members", icon: Users },
-    { title: "Attendance", href: "/admin/attendance", icon: UserCheck },
-    { title: "Departments", href: "/admin/departments", icon: Building2 },
-    { title: "Invoices", href: "/admin/invoices", icon: FileText },
-    { title: "Events", href: "/admin/events", icon: CalendarDays },
-    { title: "Settings", href: "/admin/settings", icon: Settings },
-  ];
+  const sidebarItems = isExco ? EXCO_ITEMS : ADMIN_ITEMS;
 
   const isActive = (href: string) => {
     if (href === "/admin") return pathname === "/admin";

@@ -15,6 +15,7 @@ import {
     AttendanceTrendPoint,
     AttendanceRatePoint,
 } from "@/types/attendance";
+import { UpsertIncomePayload } from "@/types/income";
 
 export const attendanceService = {
     startSession: (payload: CreateAttendanceSessionPayload) =>
@@ -72,6 +73,31 @@ export const attendanceService = {
         handleApiCall<{ success: boolean }>(
             () => apiClient.delete<ApiResponse<{ success: boolean }>>(`/attendance/${id}`),
             "Attendance deleted successfully!"
+        ),
+
+    // ----- Income + close/reopen ---------------------------------------------
+
+    getSessionIncome: (id: string) =>
+        handleApiCall<IAttendanceSession>(
+            () => apiClient.get<ApiResponse<IAttendanceSession>>(`/attendance/session/${id}/income`),
+        ),
+
+    upsertSessionIncome: (id: string, payload: UpsertIncomePayload) =>
+        handleApiCall<IAttendanceSession>(
+            () => apiClient.put<ApiResponse<IAttendanceSession>>(`/attendance/session/${id}/income`, payload),
+            "Income saved!"
+        ),
+
+    closeSession: (id: string) =>
+        handleApiCall<IAttendanceSession>(
+            () => apiClient.post<ApiResponse<IAttendanceSession>>(`/attendance/session/${id}/close`),
+            "Session closed."
+        ),
+
+    reopenSession: (id: string) =>
+        handleApiCall<IAttendanceSession>(
+            () => apiClient.post<ApiResponse<IAttendanceSession>>(`/attendance/session/${id}/reopen`),
+            "Session reopened."
         ),
 
     // Analytics

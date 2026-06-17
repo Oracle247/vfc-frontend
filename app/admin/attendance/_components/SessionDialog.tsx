@@ -18,6 +18,7 @@ import {
   validateServicesRows,
   type ServiceFormRow,
 } from "./ServicesEditor";
+import { TemplateLink, TemplatePicker } from "./TemplatePicker";
 
 interface StartSessionDialogProps {
   open: boolean;
@@ -26,6 +27,8 @@ interface StartSessionDialogProps {
     date: string;
     serviceName: string;
     services: SessionServiceInput[];
+    serviceDayId?: string | null;
+    specialProgramId?: string | null;
   }) => void;
 }
 
@@ -40,6 +43,7 @@ export function StartSessionDialog({
   const [serviceName, setServiceName] = useState("");
   const [rows, setRows] = useState<ServiceFormRow[]>([{ ...initialRow }]);
   const [multi, setMulti] = useState(false);
+  const [template, setTemplate] = useState<TemplateLink | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const reset = () => {
@@ -47,10 +51,24 @@ export function StartSessionDialog({
     setServiceName("");
     setRows([{ ...initialRow }]);
     setMulti(false);
+    setTemplate(null);
     setError(null);
   };
 
+  const handleTemplate = (
+    next: TemplateLink | null,
+    prefill?: { serviceName: string; rows: ServiceFormRow[] },
+  ) => {
+    setTemplate(next);
+    if (prefill) {
+      setServiceName(prefill.serviceName);
+      setRows(prefill.rows);
+      setMulti(prefill.rows.length > 1);
+    }
+  };
+
   const handleSubmit = () => {
+    if (!template) return setError("Pick a service day or special program.");
     if (!date) return setError("Date is required.");
     if (!serviceName.trim()) return setError("Service name is required.");
     const validationError = validateServicesRows(rows, multi);
@@ -60,6 +78,8 @@ export function StartSessionDialog({
       date,
       serviceName: serviceName.trim(),
       services: rowsToServicesPayload(date, rows),
+      serviceDayId: template.kind === "day" ? template.id : null,
+      specialProgramId: template.kind === "program" ? template.id : null,
     });
     reset();
   };
@@ -78,6 +98,8 @@ export function StartSessionDialog({
         </DialogHeader>
 
         <div className="space-y-4 py-2">
+          <TemplatePicker value={template} onChange={handleTemplate} />
+
           <div className="space-y-2">
             <Label>Date</Label>
             <Input

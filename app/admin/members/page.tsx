@@ -28,11 +28,15 @@ import { BulkImportDialog } from "./_components/BulkImportDialog";
 import { RegisterMemberDialog } from "./_components/RegisterMemberDialog";
 import { EditMemberDialog } from "./_components/EditMemberDialog";
 
+// Members view is scoped to churchStatus=MEMBER. First timers + visitors live
+// at /admin/visitors so the lists stay focused.
+const MEMBERS_ONLY: UserFilterParams = { page: 1, limit: 20, churchStatus: "MEMBER" };
+
 export default function MembersPage() {
   const [members, setMembers] = useState<IUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
-  const [filters, setFilters] = useState<UserFilterParams>({ page: 1, limit: 20 });
+  const [filters, setFilters] = useState<UserFilterParams>(MEMBERS_ONLY);
 
   // Dialog states
   const [editUser, setEditUser] = useState<IUser | null>(null);
@@ -59,9 +63,20 @@ export default function MembersPage() {
     fetchMembers();
   }, [fetchMembers]);
 
-  const handleSearch = () => {
-    setFilters((prev) => ({ ...prev, search: searchInput, page: 1 }));
-  };
+  // Debounced search: as the user types, push the value into filters after
+  // 300ms of inactivity. This replaces the old click-or-Enter pattern, which
+  // was the "type and nothing happens" bug — keystrokes never reached the
+  // backend until the user pressed Enter.
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setFilters((prev) => {
+        const next = searchInput || undefined;
+        if (prev.search === next) return prev;
+        return { ...prev, search: next, page: 1 };
+      });
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [searchInput]);
 
   const handleFilterChange = (key: string, value: string) => {
     setFilters((prev) => ({
@@ -89,6 +104,18 @@ export default function MembersPage() {
     if (!user.id || !confirm(`Delete ${user.firstName} ${user.lastName}?`)) return;
     await userService.deleteUser(user.id);
     fetchMembers();
+  };
+
+  const handleSendInvite = async (user: IUser) => {
+    if (!user.id) return;
+    if (
+      !confirm(
+        `Send a password-setup invite email to ${user.firstName} ${user.lastName} (${user.email})?`,
+      )
+    ) {
+      return;
+    }
+    await userService.sendInvite(user.id);
   };
 
   const handleBulkImport = async (file: File) => {
@@ -123,32 +150,15 @@ export default function MembersPage() {
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
-        <div className="flex gap-2 flex-1 min-w-[200px]">
+        <div className="flex-1 min-w-[200px] relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
           <Input
             placeholder="Search by name or email..."
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+            className="pl-9"
           />
-          <Button variant="outline" size="icon" onClick={handleSearch}>
-            <Search className="h-4 w-4" />
-          </Button>
         </div>
-
-        <Select
-          value={filters.churchStatus || "ALL"}
-          onValueChange={(v) => handleFilterChange("churchStatus", v)}
-        >
-          <SelectTrigger className="w-[160px]">
-            <SelectValue placeholder="Church Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">All Status</SelectItem>
-            <SelectItem value="FIRST_TIMER">First Timer</SelectItem>
-            <SelectItem value="VISITOR">Visitor</SelectItem>
-            <SelectItem value="MEMBER">Member</SelectItem>
-          </SelectContent>
-        </Select>
 
         <Select
           value={filters.role || "ALL"}
@@ -176,6 +186,7 @@ export default function MembersPage() {
           onChurchJourney={(user) => setJourneyUser(user)}
           onSetPassword={(user) => setPasswordUser(user)}
           onDelete={handleDelete}
+          onSendInvite={handleSendInvite}
         />
       )}
 

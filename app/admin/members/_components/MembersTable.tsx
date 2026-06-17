@@ -5,7 +5,7 @@ import { IUser } from "@/types/user";
 import { DataTable } from "@/components/ui/datatable";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, Pencil, Key, Trash2, UserCog } from "lucide-react";
+import { Mail, MoreHorizontal, Pencil, Key, Trash2, UserCog } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,6 +19,8 @@ interface MembersTableProps {
   onChurchJourney: (user: IUser) => void;
   onSetPassword: (user: IUser) => void;
   onDelete: (user: IUser) => void;
+  /** Optional: when provided, a "Send Invite" item is added to the row menu. */
+  onSendInvite?: (user: IUser) => void;
 }
 
 const roleBadgeColor: Record<string, string> = {
@@ -39,6 +41,7 @@ export default function MembersTable({
   onChurchJourney,
   onSetPassword,
   onDelete,
+  onSendInvite,
 }: MembersTableProps) {
   const columns: ColumnDef<IUser>[] = [
     {
@@ -110,6 +113,11 @@ export default function MembersTable({
             <DropdownMenuItem onClick={() => onSetPassword(row.original)}>
               <Key className="h-4 w-4 mr-2" /> Set Password
             </DropdownMenuItem>
+            {onSendInvite && (
+              <DropdownMenuItem onClick={() => onSendInvite(row.original)}>
+                <Mail className="h-4 w-4 mr-2" /> Send Invite Email
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem
               onClick={() => onDelete(row.original)}
               className="text-red-600"

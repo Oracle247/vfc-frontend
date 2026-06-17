@@ -19,6 +19,19 @@ export const userService = {
             () => apiClient.get<ApiResponse<IUser>>(`/user/${id}`)
         ),
 
+    /** The currently authenticated user — drives role-aware UI. */
+    getMe: () =>
+        handleApiCall<IUser>(
+            () => apiClient.get<ApiResponse<IUser>>("/user/me")
+        ),
+
+    /** Send a password-setup invite email to the user. */
+    sendInvite: (id: string) =>
+        handleApiCall<{ id: string; token: string; expiresAt: string; inviteLink: string }>(
+            () => apiClient.post<ApiResponse<{ id: string; token: string; expiresAt: string; inviteLink: string }>>(`/user/${id}/invite`),
+            "Invite email sent!",
+        ),
+
     searchUsers: (name: string) =>
         handleApiCall<IUser[]>(
             () => apiClient.get<ApiResponse<IUser[]>>(`/user/search`, { params: { name } })

@@ -10,6 +10,11 @@ import { AttendanceTable } from "@/components/Attendance/AttendanceTable";
 import { useSearchParams } from "next/navigation";
 import { format } from "date-fns";
 import { EditAttendanceDialog } from "./_components/EditAttendanceDialog";
+import { CloseSessionDialog } from "./_components/CloseSessionDialog";
+import { FinancePanel } from "./_components/FinancePanel";
+import { UpsertIncomePayload } from "@/types/income";
+import { Button } from "@/components/ui/button";
+import { Lock, Unlock } from "lucide-react";
 
 export default function AttendancePage() {
   const searchParams = useSearchParams();
@@ -25,6 +30,24 @@ export default function AttendancePage() {
   const [editAttendance, setEditAttendance] = useState<IAttendance | null>(null);
   // Service override for the next mark; "" = auto (backend infers from markedAt).
   const [serviceOverride, setServiceOverride] = useState<string>("");
+  const [showCloseDialog, setShowCloseDialog] = useState(false);
+
+  const isClosed = Boolean(attendanceData?.endedAt);
+
+  const handleSaveIncome = async (payload: UpsertIncomePayload, andClose: boolean) => {
+    if (!sessionId) return;
+    await attendanceService.upsertSessionIncome(sessionId, payload);
+    if (andClose) {
+      await attendanceService.closeSession(sessionId);
+    }
+    setToggleMarking((t) => !t); // triggers refetch
+  };
+
+  const handleReopen = async () => {
+    if (!sessionId || !confirm("Reopen this session?")) return;
+    await attendanceService.reopenSession(sessionId);
+    setToggleMarking((t) => !t);
+  };
 
   // Auto-evaluating "current service" given the configured services + clock.
   // Recomputed on every render so the indicator naturally flips once the
@@ -120,16 +143,35 @@ export default function AttendancePage() {
     <div className="p-6 max-w-3xl mx-auto">
       <h1 className="text-2xl font-bold mb-4">Attendance Management</h1>
       <div className="space-y-4">
-        <h2 className="text-lg font-bold mb-4">
-          Attendance - {attendanceData?.serviceName} (
-          {attendanceData?.startedAt
-            ? format(
-                new Date(attendanceData?.startedAt),
-                "dd MMM yyyy, hh:mm a"
-              )
-            : ""}
-          )
-        </h2>
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 className="text-lg font-bold">
+            Attendance - {attendanceData?.serviceName} (
+            {attendanceData?.startedAt
+              ? format(new Date(attendanceData?.startedAt), "dd MMM yyyy, hh:mm a")
+              : ""}
+            )
+          </h2>
+          <div className="ml-auto flex items-center gap-2">
+            {isClosed && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs bg-amber-50 text-amber-800 border border-amber-200">
+                <Lock className="h-3 w-3" /> Closed
+              </span>
+            )}
+            <Button
+              size="sm"
+              variant={isClosed ? "outline" : "default"}
+              onClick={() => setShowCloseDialog(true)}
+            >
+              {isClosed ? "Edit Income" : "Close Session"}
+            </Button>
+            {isClosed && (
+              <Button size="sm" variant="ghost" onClick={handleReopen}>
+                <Unlock className="h-3.5 w-3.5 mr-1" />
+                Reopen
+              </Button>
+            )}
+          </div>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-2">
           <input
             type="text"
@@ -307,6 +349,8 @@ export default function AttendancePage() {
           </form>
         )}
 
+        <FinancePanel services={attendanceData?.services ?? []} />
+
         <div className="p-6">
           <h2 className="text-2xl font-semibold mb-4">Attendance Records</h2>
           <AttendanceTable
@@ -324,6 +368,14 @@ export default function AttendancePage() {
         attendance={editAttendance}
         services={attendanceData?.services ?? []}
         onSave={handleEditAttendance}
+      />
+
+      <CloseSessionDialog
+        open={showCloseDialog}
+        onOpenChange={setShowCloseDialog}
+        services={attendanceData?.services ?? []}
+        isClosed={isClosed}
+        onSave={handleSaveIncome}
       />
     </div>
   );
